@@ -1,9 +1,10 @@
 -- ============================================================================
--- ANALYTICAL DML QUERIES (MEMBER 1: CORE RELATIONAL ENGINE)
+-- ANALYTICAL DML QUERIES & EXECUTION PLANS (MEMBER 1: CORE RELATIONAL ENGINE)
 -- ============================================================================
 
 -- Query 1: Grouping claims by policy type with aggregation
 -- Evaluates aggregate volume, total capital at risk, average claim size, and approved payouts per insurance line.
+EXPLAIN (ANALYZE, BUFFERS)
 SELECT 
     p.policy_type,
     COUNT(c.claim_id) AS total_claims_count,
@@ -17,6 +18,7 @@ ORDER BY total_claimed_amount DESC;
 
 -- Query 2: Nested Subquery to identify policyholders with multiple open/pending claims
 -- Crucial for fraud detection and risk underwriting scrutiny.
+EXPLAIN (ANALYZE, BUFFERS)
 SELECT 
     u.user_id,
     u.full_name AS policyholder_name,
@@ -39,6 +41,7 @@ JOIN (
 
 -- Query 3: Correlated Subquery to identify claims exceeding the peer average for their policy type
 -- Flags disproportionately large claims within each category.
+EXPLAIN (ANALYZE, BUFFERS)
 SELECT 
     c.claim_id,
     c.claim_number,
@@ -57,6 +60,7 @@ WHERE c.claimed_amount > (
 
 -- Query 4: Policyholder Coverage Utilization and Loss Ratio
 -- Calculates remaining coverage vs total policy limit for active policies.
+EXPLAIN (ANALYZE, BUFFERS)
 SELECT 
     u.full_name AS policyholder,
     p.policy_number,
