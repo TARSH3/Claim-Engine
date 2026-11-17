@@ -1,23 +1,34 @@
-import type { NextRequest } from "next/server";
-import { pool } from "@/lib/pg";
+import { NextResponse, type NextRequest } from 'next/server';
+import { pool } from '@/lib/db';
 
-const STATUSES = ["Pending", "Under Review", "Approved", "Rejected"];
-
-// GET /api/adjuster/claims?status=Pending&q=aarav
 export async function GET(req: NextRequest) {
-  const status = req.nextUrl.searchParams.get("status");
-  const q = req.nextUrl.searchParams.get("q")?.trim();
-  const where: string[] = [];
-  const args: string[] = [];
-  if (status && STATUSES.includes(status)) { args.push(status); where.push(`status = $${args.length}`); }
-  if (q) { args.push(`%${q}%`); where.push(`(full_name ILIKE $${args.length} OR policy_number ILIKE $${args.length})`); }
   try {
-    const { rows } = await pool.query(
-      `SELECT * FROM vw_AdjusterPendingClaims ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY filed_at DESC`,
-      args,
-    );
-    return Response.json({ claims: rows });
-  } catch (e) {
-    return Response.json({ error: (e as Error).message }, { status: 500 });
+    const status = req.nextUrl.searchParams.get('status');
+    const q = req.nextUrl.searchParams.get('q')?.trim();
+
+    let query = `SELECT * FROM vw_AdjusterPendingClaims`;
+    const where: string[] = [];
+    const args: any[] = [];
+
+    if (status && status !== 'All') {
+      args.push(status);
+      where.push(`status = $${args.length}`);
+    }
+
+    if (q) {
+      args.push(`%${q}%`);
+      where.push(`(claimant_name ILIKE $${args.length} OR policy_number ILIKE $${args.length} OR claim_number ILIKE $${args.length})`);
+    }
+
+    if (where.length > 0) {
+      query += ` WHERE ${where.join(' AND ')}`;
+    }
+
+    query += ` ORDER BY filing_date ASC, claim_id ASC`;
+
+    const { rows } = await pool.query(query, args);
+    return NextResponse.json({ claims: rows });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

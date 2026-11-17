@@ -1,12 +1,17 @@
 import { MongoClient, type Db } from "mongodb";
 
-const g = globalThis as unknown as { _mongo?: Promise<MongoClient> };
+const uri = process.env.MONGODB_URI || "mongodb://localhost:27017";
+const client = new MongoClient(uri, { serverSelectionTimeoutMS: 2000 });
+
+const g = globalThis as unknown as { _mongoPromise?: Promise<MongoClient> };
+export const mongoPromise: Promise<MongoClient> = g._mongoPromise ?? (g._mongoPromise = client.connect().catch((err) => {
+  console.warn("MongoDB connection warning (NoSQL store may be unavailable):", err.message);
+  return client;
+}));
 
 export async function getDb(): Promise<Db> {
-  const uri = process.env.MONGODB_URI;
-  if (!uri) throw new Error("MONGODB_URI is not set");
-  g._mongo ??= new MongoClient(uri).connect();
-  return (await g._mongo).db(process.env.MONGODB_DB ?? "claim_engine");
+  const cli = await mongoPromise;
+  return cli.db(process.env.MONGODB_DB ?? "claims_engine_unstructured");
 }
 
 export const REPORTS = "IncidentReports";
